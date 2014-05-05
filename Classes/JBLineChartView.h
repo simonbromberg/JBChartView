@@ -29,6 +29,7 @@ typedef NS_ENUM(NSInteger, JBLineChartViewLineStyle){
 
 @property (nonatomic, weak) id<JBLineChartViewDelegate> delegate;
 @property (nonatomic, weak) id<JBLineChartViewDataSource> dataSource;
+@property (nonatomic, assign) UIView* firstDotView;
 
 /**
  *  Vertical highlight overlayed on a line graph during touch events.
@@ -141,6 +142,15 @@ typedef NS_ENUM(NSInteger, JBLineChartViewLineStyle){
  *  @return The color to be used to color a dot within a dotted line in the chart.
  */
 - (UIColor *)lineChartView:(JBLineChartView *)lineChartView colorForDotAtHorizontalIndex:(NSUInteger)horizontalIndex atLineIndex:(NSUInteger)lineIndex;
+
+/**
+ * Returns UIView for dots in a line
+ * Default: view is nil
+ * @param lineChartView    The line chart object requesting this information.
+ * @param lineIndex        An index number identifying a line in the chart.
+ * @param pointIndex       An index number identifying a point in the chart.
+ */
+- (UIView*) lineChartView: (JBLineChartView*) lineChartView viewForDotAtHorizontalIndex: (NSUInteger) horizontalIndex atLineIndex: (NSUInteger) lineIndex;
 
 /**
  *  Returns the width of particular line at lineIndex within the chart.
