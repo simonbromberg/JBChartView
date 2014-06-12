@@ -38,7 +38,7 @@ Simply add the following line to your <code>Podfile</code>:
 Your Podfile should look something like:
 
 	platform :ios, '7.0'
-	pod 'JBChartView', '~> 2.5.0'
+	pod 'JBChartView', '~> 2.5.5'
 	
 ### The Old School Way
 
@@ -63,14 +63,14 @@ To initialize a <i>JBBarChartView</i>, you only need a few lines of code (see be
     
 At a minimum, you need to inform the data source how many bars are in the chart:
 
-	- (NSInteger)numberOfBarsInBarChartView:(JBBarChartView *)barChartView
+	- (NSUInteger)numberOfBarsInBarChartView:(JBBarChartView *)barChartView
 	{
 		return ...; // number of bars in chart
 	}
 
 Secondly, you need to inform the delegate the height of each bar (automatically normalized across the entire chart):
     
-    - (CGFloat)barChartView:(JBBarChartView *)barChartView heightForBarViewAtAtIndex:(NSInteger)index
+    - (CGFloat)barChartView:(JBBarChartView *)barChartView heightForBarViewAtAtIndex:(NSUInteger)index
     {
 		return ...; // height of bar at index
 	}
@@ -140,6 +140,10 @@ By default, a chart's bars will be black and flat. They can be customized by sup
 	{
 		return ...; // color of line in chart
 	}
+	
+If you don't require a custom UIView, simply supply a color for the bar instead:
+
+	- (UIColor *)barChartView:(JBBarChartView *)barChartView colorForBarViewAtIndex:(NSUInteger)index;
 
 Furthermore, the color of the selection bar (on touch events) can be customized via the <i>optional</i> protocol:
 
@@ -232,7 +236,7 @@ The <b>touchPoint</b> is especially important as it allows you to add custom ele
 
 ## Minimum & Maximum Values
 
-By default, a chart's minimum value (y-axis) is equal to 0. The maximum is equal to the max value supplied by the dataSource. You can override either value via:
+By default, a chart's minimum and maximum values are equal to the min and max supplied by the dataSource. You can override either value via:
 
 	- (void)setMinimumValue:(CGFloat)minimumValue;
 	- (void)setMaximumValue:(CGFloat)maximumValue;
