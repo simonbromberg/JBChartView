@@ -27,8 +27,8 @@ typedef NS_ENUM(NSInteger, JBLineChartViewLineStyle){
 
 @interface JBLineChartView : JBChartView
 
-@property (nonatomic, weak) id<JBLineChartViewDelegate> delegate;
-@property (nonatomic, weak) id<JBLineChartViewDataSource> dataSource;
+@property (nonatomic, weak) IBOutlet id<JBLineChartViewDelegate> delegate;
+@property (nonatomic, weak) IBOutlet id<JBLineChartViewDataSource> dataSource;
 @property (nonatomic, assign) UIView* firstDotView;
 
 /**
