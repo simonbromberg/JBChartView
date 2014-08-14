@@ -576,7 +576,7 @@ static UIColor *kJBLineChartViewDefaultDotSelectionColor = nil;
 - (UIView *)lineChartDotsView:(JBLineChartDotsView *)lineChartDotsView viewForDotAtHorizontalIndex:(NSUInteger)horizontalIndex atLineIndex:(NSUInteger)lineIndex {
     if ([self.dataSource respondsToSelector:@selector(lineChartView:viewForDotAtHorizontalIndex:atLineIndex:)])
     {
-        return [self.dataSource lineChartView:self viewForDotAtHorizontalIndex:horizontalIndex atLineIndex:lineIndex];
+        return [self.delegate lineChartView:self viewForDotAtHorizontalIndex:horizontalIndex atLineIndex:lineIndex];
     }
     return nil;
 }
@@ -585,7 +585,7 @@ static UIColor *kJBLineChartViewDefaultDotSelectionColor = nil;
 {
     if ([self.dataSource respondsToSelector:@selector(lineChartView:selectionColorForLineAtLineIndex:)])
     {
-        return [self.dataSource lineChartView:self selectionColorForLineAtLineIndex:lineIndex];
+        return [self.delegate lineChartView:self selectionColorForLineAtLineIndex:lineIndex];
     }
     return kJBLineChartViewDefaultLineSelectionColor;
 }
