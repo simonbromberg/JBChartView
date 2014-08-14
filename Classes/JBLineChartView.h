@@ -28,10 +28,6 @@ typedef NS_ENUM(NSInteger, JBLineChartViewLineStyle){
 
 @required
 
-@property (nonatomic, weak) IBOutlet id<JBLineChartViewDelegate> delegate;
-@property (nonatomic, weak) IBOutlet id<JBLineChartViewDataSource> dataSource;
-@property (nonatomic, assign) UIView* firstDotView;
-
 /**
  *  Returns the number of lines for the line chart.
  *
@@ -278,8 +274,9 @@ typedef NS_ENUM(NSInteger, JBLineChartViewLineStyle){
 
 @interface JBLineChartView : JBChartView
 
-@property (nonatomic, weak) id<JBLineChartViewDataSource> dataSource;
-@property (nonatomic, weak) id<JBLineChartViewDelegate> delegate;
+@property (nonatomic, weak) IBOutlet id<JBLineChartViewDataSource> dataSource;
+@property (nonatomic, weak) IBOutlet id<JBLineChartViewDelegate> delegate;
+@property (nonatomic, assign) UIView* firstDotView;
 
 /**
  *  Vertical highlight overlayed on a line graph during touch events.
