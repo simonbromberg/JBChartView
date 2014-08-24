@@ -43,7 +43,7 @@ Simply add the following line to your <code>Podfile</code>:
 Your Podfile should look something like:
 
 	platform :ios, '6.0'
-	pod 'JBChartView', '~> 2.7.3'
+	pod 'JBChartView', '~> 2.8.1'
 	
 ### The Old School Way
 
@@ -208,7 +208,7 @@ The color, width and style of each line in the chart can be customized via the <
 	
 Furthermore, the color and width of the selection view along with the color of the selected line can be customized via the <i>optional</i> protocols:
 
-	- (UIColor *)verticalSelectionColorForLineChartView:(JBLineChartView *)lineChartView
+	- (UIColor *)lineChartView:(JBLineChartView *)lineChartView verticalSelectionColorForLineAtLineIndex:(NSUInteger)lineIndex
 	{
 		return ...; // color of selection view
 	}
@@ -234,7 +234,7 @@ By default, each line will not show dots for each point. To enable this on a per
 
 To customize the size of each dot (default 3x the line width), implement:
 
-	- (CGFloat)lineChartView:(JBLineChartView *)lineChartView dotRadiusForLineAtLineIndex:(NSUInteger)lineIndex;
+	- (CGFloat)lineChartView:(JBLineChartView *)lineChartView dotRadiusForDotAtHorizontalIndex:(NSUInteger)horizontalIndex atLineIndex:(NSUInteger)lineIndex;
 	
 To customize the color of each dot during selection and non-selection events (default is white and black respectively), implement:
 
@@ -242,6 +242,10 @@ To customize the color of each dot during selection and non-selection events (de
 
 	- (UIColor *)lineChartView:(JBLineChartView *)lineChartView selectionColorForDotAtHorizontalIndex:(NSUInteger)horizontalIndex atLineIndex:(NSUInteger)lineIndex;
 	
+Alternatively, you can supply your own UIView instead of using the default impelmentation (note: custom dot views are automatically hidden when selected):
+
+	- (UIView *)lineChartView:(JBLineChartView *)lineChartView dotViewAtHorizontalIndex:(NSUInteger)horizontalIndex atLineIndex:(NSUInteger)lineIndex;
+		
 As well, by default, each line will have squared off end caps and connection points. To enable rounded connections and end caps:
 
 	- (BOOL)lineChartView:(JBLineChartView *)lineChartView smoothLineAtLineIndex:(NSUInteger)lineIndex;

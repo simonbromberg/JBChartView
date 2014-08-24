@@ -139,7 +139,8 @@ static UIColor *kJBLineChartViewDefaultDotSelectionColor = nil;
 - (UIColor *)lineChartDotsView:(JBLineChartDotsView *)lineChartDotsView selectedColorForLineAtLineIndex:(NSUInteger)lineIndex;
 - (UIColor *)lineChartDotsView:(JBLineChartDotsView *)lineChartDotsView selectedColorForDotAtHorizontalIndex:(NSUInteger)horizontalIndex atLineIndex:(NSUInteger)lineIndex;
 - (CGFloat)lineChartDotsView:(JBLineChartDotsView *)lineChartDotsView widthForLineAtLineIndex:(NSUInteger)lineIndex;
-- (CGFloat)lineChartDotsView:(JBLineChartDotsView *)lineChartDotsView dotRadiusForLineAtLineIndex:(NSUInteger)lineIndex;
+- (CGFloat)lineChartDotsView:(JBLineChartDotsView *)lineChartDotsView dotRadiusForLineAtHorizontalIndex:(NSUInteger)horizontalIndex atLineIndex:(NSUInteger)lineIndex;
+- (UIView *)lineChartDotsView:(JBLineChartDotsView *)lineChartDotsView dotViewAtHorizontalIndex:(NSUInteger)horizontalIndex atLineIndex:(NSUInteger)lineIndex;
 - (CGFloat)paddingForLineChartDotsView:(JBLineChartDotsView *)lineChartDotsView;
 - (BOOL)lineChartDotsView:(JBLineChartDotsView *)lineChartDotsView showsDotsForLineAtLineIndex:(NSUInteger)lineIndex;
 
@@ -370,12 +371,6 @@ static UIColor *kJBLineChartViewDefaultDotSelectionColor = nil;
         self.verticalSelectionView = [[JBChartVerticalSelectionView alloc] initWithFrame:CGRectMake(0, 0, selectionViewWidth, self.bounds.size.height - self.footerView.frame.size.height)];
         self.verticalSelectionView.alpha = 0.0;
         self.verticalSelectionView.hidden = !self.showsVerticalSelection;
-        if ([self.delegate respondsToSelector:@selector(verticalSelectionColorForLineChartView:)])
-        {
-            UIColor *selectionViewBackgroundColor = [self.delegate verticalSelectionColorForLineChartView:self];
-            NSAssert(selectionViewBackgroundColor != nil, @"JBLineChartView // delegate function - (UIColor *)verticalSelectionColorForLineChartView:(JBLineChartView *)lineChartView must return a non-nil UIColor");
-            self.verticalSelectionView.bgColor = selectionViewBackgroundColor;
-        }
 
         // Add new selection bar
         if (self.footerView)
@@ -444,20 +439,82 @@ static UIColor *kJBLineChartViewDefaultDotSelectionColor = nil;
             lineWidth = [self.delegate lineChartView:self widthForLineAtLineIndex:lineIndex];
         }
         
-        CGFloat dotRadius = 0;
+        CGFloat maxDotLength = 0;
         if (showsDots)
         {
-            if ([self.delegate respondsToSelector:@selector(lineChartView:dotRadiusForLineAtLineIndex:)])
+            NSAssert([self.dataSource respondsToSelector:@selector(numberOfLinesInLineChartView:)], @"JBLineChartView // dataSource must implement - (NSUInteger)numberOfLinesInLineChartView:(JBLineChartView *)lineChartView");
+            for (NSUInteger lineIndex=0; lineIndex<[self.dataSource numberOfLinesInLineChartView:self]; lineIndex++)
             {
-                dotRadius = [self.delegate lineChartView:self dotRadiusForLineAtLineIndex:lineIndex];
-            }
-            else
-            {
-                dotRadius = lineWidth * kJBLineChartDotsViewDefaultRadiusFactor; // default
+                NSAssert([self.dataSource respondsToSelector:@selector(lineChartView:numberOfVerticalValuesAtLineIndex:)], @"JBLineChartView // dataSource must implement - (NSUInteger)lineChartView:(JBLineChartView *)lineChartView numberOfVerticalValuesAtLineIndex:(NSUInteger)lineIndex");
+                NSUInteger dataCount = [self.dataSource lineChartView:self numberOfVerticalValuesAtLineIndex:lineIndex];
+                
+                for (NSUInteger horizontalIndex=0; horizontalIndex<dataCount; horizontalIndex++)
+                {
+                    BOOL shouldEvaluateDotSize = NO;
+                    
+                    // Left dot
+                    if (horizontalIndex == 0)
+                    {
+                        shouldEvaluateDotSize = YES;
+                    }
+                    // Right dot
+                    else if (horizontalIndex == (dataCount - 1))
+                    {
+                        shouldEvaluateDotSize = YES;
+                    }
+                    else
+                    {
+                        NSAssert([self.delegate respondsToSelector:@selector(lineChartView:verticalValueForHorizontalIndex:atLineIndex:)], @"JBLineChartView // delegate must implement - (CGFloat)lineChartView:(JBLineChartView *)lineChartView verticalValueForHorizontalIndex:(NSUInteger)horizontalIndex atLineIndex:(NSUInteger)lineIndex");
+                        CGFloat height = [self.delegate lineChartView:self verticalValueForHorizontalIndex:horizontalIndex atLineIndex:lineIndex];
+                                                
+                        // Top
+                        if (height == [self cachedMaxHeight])
+                        {
+                            shouldEvaluateDotSize = YES;
+                        }
+                        
+                        // Bottom
+                        else if (height == [self cachedMinHeight])
+                        {
+                            shouldEvaluateDotSize = YES;
+                        }
+                    }
+                    
+                    if (shouldEvaluateDotSize)
+                    {
+                        if ([self.dataSource respondsToSelector:@selector(lineChartView:dotViewAtHorizontalIndex:atLineIndex:)])
+                        {
+                            if ([self.dataSource respondsToSelector:@selector(lineChartView:dotViewAtHorizontalIndex:atLineIndex:)])
+                            {
+                                UIView *customDotView = [self.dataSource lineChartView:self dotViewAtHorizontalIndex:horizontalIndex atLineIndex:lineIndex];
+                                if (customDotView.frame.size.width > maxDotLength || customDotView.frame.size.height > maxDotLength)
+                                {
+                                    maxDotLength = fmaxf(customDotView.frame.size.width, customDotView.frame.size.height);
+                                }
+                            }
+                        }
+                        else if ([self.delegate respondsToSelector:@selector(lineChartView:dotRadiusForDotAtHorizontalIndex:atLineIndex:)])
+                        {
+                            CGFloat dotRadius = [self.delegate lineChartView:self dotRadiusForDotAtHorizontalIndex:horizontalIndex atLineIndex:lineIndex];
+                            if (dotRadius > maxDotLength)
+                            {
+                                maxDotLength = dotRadius;
+                            }
+                        }
+                        else
+                        {
+                            CGFloat defaultDotRadius = lineWidth * kJBLineChartDotsViewDefaultRadiusFactor;
+                            if (defaultDotRadius > maxDotLength)
+                            {
+                                maxDotLength = defaultDotRadius;
+                            }
+                        }
+                    }
+                }
             }
         }
         
-        CGFloat currentMaxLineWidth = MAX(dotRadius, lineWidth);
+        CGFloat currentMaxLineWidth = MAX(maxDotLength, lineWidth);
         if (currentMaxLineWidth > maxLineWidth)
         {
             maxLineWidth = currentMaxLineWidth;
@@ -608,16 +665,22 @@ static UIColor *kJBLineChartViewDefaultDotSelectionColor = nil;
     return kJBLineChartLinesViewStrokeWidth;
 }
 
-- (CGFloat)lineChartDotsView:(JBLineChartDotsView *)lineChartDotsView dotRadiusForLineAtLineIndex:(NSUInteger)lineIndex
+- (CGFloat)lineChartDotsView:(JBLineChartDotsView *)lineChartDotsView dotRadiusForLineAtHorizontalIndex:(NSUInteger)horizontalIndex atLineIndex:(NSUInteger)lineIndex
 {
-    if ([self.delegate respondsToSelector:@selector(lineChartView:dotRadiusForLineAtLineIndex:)])
+    if ([self.delegate respondsToSelector:@selector(lineChartView:dotRadiusForDotAtHorizontalIndex:atLineIndex:)])
     {
-        return [self.delegate lineChartView:self dotRadiusForLineAtLineIndex:lineIndex];
+        return [self.delegate lineChartView:self dotRadiusForDotAtHorizontalIndex:horizontalIndex atLineIndex:lineIndex];
     }
-    else
+    return [self lineChartDotsView:lineChartDotsView widthForLineAtLineIndex:lineIndex] * kJBLineChartDotsViewDefaultRadiusFactor;
+}
+
+- (UIView *)lineChartDotsView:(JBLineChartDotsView *)lineChartDotsView dotViewAtHorizontalIndex:(NSUInteger)horizontalIndex atLineIndex:(NSUInteger)lineIndex
+{
+    if ([self.dataSource respondsToSelector:@selector(lineChartView:dotViewAtHorizontalIndex:atLineIndex:)])
     {
-        return [self lineChartDotsView:lineChartDotsView widthForLineAtLineIndex:lineIndex] * kJBLineChartDotsViewDefaultRadiusFactor;
+        return [self.dataSource lineChartView:self dotViewAtHorizontalIndex:horizontalIndex atLineIndex:lineIndex];
     }
+    return nil;
 }
 
 - (CGFloat)paddingForLineChartDotsView:(JBLineChartDotsView *)lineChartDotsView
@@ -874,18 +937,25 @@ static UIColor *kJBLineChartViewDefaultDotSelectionColor = nil;
     
     UITouch *touch = [touches anyObject];
     CGPoint touchPoint = [self clampPoint:[touch locationInView:self.linesView] toBounds:self.linesView.bounds padding:[self padding]];
+    
+    NSUInteger lineIndex = self.linesView.selectedLineIndex != kJBLineChartLinesViewUnselectedLineIndex ? self.linesView.selectedLineIndex : [self lineIndexForPoint:touchPoint];
 
     if ([self.delegate respondsToSelector:@selector(lineChartView:didSelectLineAtIndex:horizontalIndex:touchPoint:)])
     {
-        NSUInteger lineIndex = self.linesView.selectedLineIndex != kJBLineChartLinesViewUnselectedLineIndex ? self.linesView.selectedLineIndex : [self lineIndexForPoint:touchPoint];
         NSUInteger horizontalIndex = [self horizontalIndexForPoint:touchPoint indexClamp:JBLineChartHorizontalIndexClampNone lineData:[self.chartData objectAtIndex:lineIndex]];
         [self.delegate lineChartView:self didSelectLineAtIndex:lineIndex horizontalIndex:horizontalIndex touchPoint:[touch locationInView:self]];
     }
     
     if ([self.delegate respondsToSelector:@selector(lineChartView:didSelectLineAtIndex:horizontalIndex:)])
     {
-        NSUInteger lineIndex = self.linesView.selectedLineIndex != kJBLineChartLinesViewUnselectedLineIndex ? self.linesView.selectedLineIndex : [self lineIndexForPoint:touchPoint];
         [self.delegate lineChartView:self didSelectLineAtIndex:lineIndex horizontalIndex:[self horizontalIndexForPoint:touchPoint indexClamp:JBLineChartHorizontalIndexClampNone lineData:[self.chartData objectAtIndex:lineIndex]]];
+    }
+    
+    if ([self.delegate respondsToSelector:@selector(lineChartView:verticalSelectionColorForLineAtLineIndex:)])
+    {
+        UIColor *verticalSelectionColor = [self.delegate lineChartView:self verticalSelectionColorForLineAtLineIndex:lineIndex];
+        NSAssert(verticalSelectionColor != nil, @"JBLineChartView // delegate function - (UIColor *)lineChartView:(JBLineChartView *)lineChartView verticalSelectionColorForLineAtLineIndex:(NSUInteger)lineIndex must return a non-nil UIColor");
+        self.verticalSelectionView.bgColor = verticalSelectionColor;
     }
     
     CGFloat xOffset = fmin(self.bounds.size.width - self.verticalSelectionView.frame.size.width, fmax(0, touchPoint.x - (ceil(self.verticalSelectionView.frame.size.width * 0.5))));
@@ -919,8 +989,6 @@ static UIColor *kJBLineChartViewDefaultDotSelectionColor = nil;
 - (void)setVerticalSelectionViewVisible:(BOOL)verticalSelectionViewVisible animated:(BOOL)animated
 {
     _verticalSelectionViewVisible = verticalSelectionViewVisible;
-
-    [self bringSubviewToFront:self.verticalSelectionView];
 
     if (animated)
     {
@@ -1374,29 +1442,50 @@ static UIColor *kJBLineChartViewDefaultDotSelectionColor = nil;
             NSUInteger horizontalIndex = 0;
             for (JBLineChartPoint *lineChartPoint in [lineData sortedArrayUsingSelector:@selector(compare:)])
             {
-                JBLineChartDotView *dotView;
-                UIView* view;
-                if ([self.delegate respondsToSelector:@selector(lineChartDotsView:viewForDotAtHorizontalIndex:atLineIndex:)]) {
-                    view = [self.delegate lineChartDotsView:self viewForDotAtHorizontalIndex:horizontalIndex atLineIndex:lineIndex];
+//<<<<<<< HEAD
+//                JBLineChartDotView *dotView;
+//                UIView* view;
+//                if ([self.delegate respondsToSelector:@selector(lineChartDotsView:viewForDotAtHorizontalIndex:atLineIndex:)]) {
+//                    view = [self.delegate lineChartDotsView:self viewForDotAtHorizontalIndex:horizontalIndex atLineIndex:lineIndex];
+//                }
+//                
+//                if (view != nil) {
+//                    dotView = [[JBLineChartDotView alloc] initWithView:view];
+//                }
+//                NSAssert([self.delegate respondsToSelector:@selector(lineChartDotsView:dotRadiusForLineAtLineIndex:)], @"JBLineChartDotsView // delegate must implement - (CGFloat)lineChartDotsView:(JBLineChartDotsView *)lineChartDotsView dotRadiusForLineAtLineIndex:(NSUInteger)lineIndex");
+//                CGFloat dotRadius = [self.delegate lineChartDotsView:self dotRadiusForLineAtLineIndex:lineIndex];
+//                
+//                if (dotView == nil) {
+//                    dotView = [[JBLineChartDotView alloc] initWithRadius:dotRadius];
+//                }
+//                dotView.center = CGPointMake(lineChartPoint.position.x, fmin(self.bounds.size.height - padding, fmax(padding, lineChartPoint.position.y)));
+//                
+//                NSAssert([self.delegate respondsToSelector:@selector(lineChartDotsView:colorForDotAtHorizontalIndex:atLineIndex:)], @"JBLineChartDotsView // delegate must implement - (UIColor *)lineChartDotsView:(JBLineChartDotsView *)lineChartDotsView colorForDotAtHorizontalIndex:(NSUInteger)horizontalIndex atLineIndex:(NSUInteger)lineIndex");
+//                dotView.backgroundColor = [self.delegate lineChartDotsView:self colorForDotAtHorizontalIndex:horizontalIndex atLineIndex:lineIndex];
+//                
+//                [mutableDotViews addObject:dotView];
+//                [self addSubview:dotView];
+//=======
+                NSAssert([self.delegate respondsToSelector:@selector(lineChartDotsView:dotViewAtHorizontalIndex:atLineIndex:)], @"JBLineChartDotsView // delegate must implement - (UIView *)lineChartDotsView:(JBLineChartDotsView *)lineChartDotsView dotViewAtHorizontalIndex:(NSUInteger)horizontalIndex atLineIndex:(NSUInteger)lineIndex");
+                UIView *currentDotView = [self.delegate lineChartDotsView:self dotViewAtHorizontalIndex:horizontalIndex atLineIndex:lineIndex];
+//>>>>>>> 4363147303bf7478c7d4bce8320d0afc0a10a6fe
+                
+                // System dot
+                if (currentDotView == nil)
+                {
+                    NSAssert([self.delegate respondsToSelector:@selector(lineChartDotsView:dotRadiusForLineAtHorizontalIndex:atLineIndex:)], @"JBLineChartDotsView // delegate must implement - (CGFloat)lineChartDotsView:(JBLineChartDotsView *)lineChartDotsView dotRadiusForLineAtHorizontalIndex:(NSUInteger)horizontalIndex atLineIndex:(NSUInteger)lineIndex");
+                    CGFloat dotRadius = [self.delegate lineChartDotsView:self dotRadiusForLineAtHorizontalIndex:horizontalIndex atLineIndex:lineIndex];
+                    
+                    currentDotView = [[JBLineChartDotView alloc] initWithRadius:dotRadius];
+                    
+                    NSAssert([self.delegate respondsToSelector:@selector(lineChartDotsView:colorForDotAtHorizontalIndex:atLineIndex:)], @"JBLineChartDotsView // delegate must implement - (UIColor *)lineChartDotsView:(JBLineChartDotsView *)lineChartDotsView colorForDotAtHorizontalIndex:(NSUInteger)horizontalIndex atLineIndex:(NSUInteger)lineIndex");
+                    currentDotView.backgroundColor = [self.delegate lineChartDotsView:self colorForDotAtHorizontalIndex:horizontalIndex atLineIndex:lineIndex];
                 }
-                
-                if (view != nil) {
-                    dotView = [[JBLineChartDotView alloc] initWithView:view];
-                }
-                NSAssert([self.delegate respondsToSelector:@selector(lineChartDotsView:dotRadiusForLineAtLineIndex:)], @"JBLineChartDotsView // delegate must implement - (CGFloat)lineChartDotsView:(JBLineChartDotsView *)lineChartDotsView dotRadiusForLineAtLineIndex:(NSUInteger)lineIndex");
-                CGFloat dotRadius = [self.delegate lineChartDotsView:self dotRadiusForLineAtLineIndex:lineIndex];
-                
-                if (dotView == nil) {
-                    dotView = [[JBLineChartDotView alloc] initWithRadius:dotRadius];
-                }
-                dotView.center = CGPointMake(lineChartPoint.position.x, fmin(self.bounds.size.height - padding, fmax(padding, lineChartPoint.position.y)));
-                
-                NSAssert([self.delegate respondsToSelector:@selector(lineChartDotsView:colorForDotAtHorizontalIndex:atLineIndex:)], @"JBLineChartDotsView // delegate must implement - (UIColor *)lineChartDotsView:(JBLineChartDotsView *)lineChartDotsView colorForDotAtHorizontalIndex:(NSUInteger)horizontalIndex atLineIndex:(NSUInteger)lineIndex");
-                dotView.backgroundColor = [self.delegate lineChartDotsView:self colorForDotAtHorizontalIndex:horizontalIndex atLineIndex:lineIndex];
-                
-                [mutableDotViews addObject:dotView];
-                [self addSubview:dotView];
-                
+
+                currentDotView.center = CGPointMake(lineChartPoint.position.x, fmin(self.bounds.size.height - padding, fmax(padding, lineChartPoint.position.y)));
+                [mutableDotViews addObject:currentDotView];
+                [self addSubview:currentDotView];
+
                 horizontalIndex++;
             }
             [mutableDotViewsDict setObject:[NSArray arrayWithArray:mutableDotViews] forKey:[NSNumber numberWithInteger:lineIndex]];
@@ -1417,22 +1506,31 @@ static UIColor *kJBLineChartViewDefaultDotSelectionColor = nil;
     dispatch_block_t adjustDots = ^{
         [weakSelf.dotViewsDict enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
             NSUInteger horizontalIndex = 0;
-            for (JBLineChartDotView *dotView in (NSArray *)obj)
+            for (UIView *dotView in (NSArray *)obj)
             {
                 if ([key isKindOfClass:[NSNumber class]])
                 {
                     NSInteger lineIndex = [((NSNumber *)key) intValue];
 
-                    if (weakSelf.selectedLineIndex == lineIndex)
+                    // Internal dot
+                    if ([dotView isKindOfClass:[JBLineChartDotView class]])
                     {
-                        NSAssert([self.delegate respondsToSelector:@selector(lineChartDotsView:selectedColorForDotAtHorizontalIndex:atLineIndex:)], @"JBLineChartDotsView // delegate must implement - (UIColor *)lineChartDotsView:(JBLineChartDotsView *)lineChartDotsView selectedColorForDotAtHorizontalIndex:(NSUInteger)horizontalIndex atLineIndex:(NSUInteger)lineIndex");
-                        dotView.backgroundColor = [self.delegate lineChartDotsView:self selectedColorForDotAtHorizontalIndex:horizontalIndex atLineIndex:lineIndex];
+                        if (weakSelf.selectedLineIndex == lineIndex)
+                        {
+                            NSAssert([self.delegate respondsToSelector:@selector(lineChartDotsView:selectedColorForDotAtHorizontalIndex:atLineIndex:)], @"JBLineChartDotsView // delegate must implement - (UIColor *)lineChartDotsView:(JBLineChartDotsView *)lineChartDotsView selectedColorForDotAtHorizontalIndex:(NSUInteger)horizontalIndex atLineIndex:(NSUInteger)lineIndex");
+                            dotView.backgroundColor = [self.delegate lineChartDotsView:self selectedColorForDotAtHorizontalIndex:horizontalIndex atLineIndex:lineIndex];
+                        }
+                        else
+                        {
+                            NSAssert([self.delegate respondsToSelector:@selector(lineChartDotsView:colorForDotAtHorizontalIndex:atLineIndex:)], @"JBLineChartDotsView // delegate must implement - (UIColor *)lineChartDotsView:(JBLineChartDotsView *)lineChartDotsView colorForDotAtHorizontalIndex:(NSUInteger)horizontalIndex atLineIndex:(NSUInteger)lineIndex");
+                            dotView.backgroundColor = [self.delegate lineChartDotsView:self colorForDotAtHorizontalIndex:horizontalIndex atLineIndex:lineIndex];
+                            dotView.alpha = (weakSelf.selectedLineIndex == kJBLineChartDotsViewUnselectedLineIndex) ? 1.0f : 0.0f; // hide dots on off-selection
+                        }
                     }
+                    // Custom dot
                     else
                     {
-                        NSAssert([self.delegate respondsToSelector:@selector(lineChartDotsView:colorForDotAtHorizontalIndex:atLineIndex:)], @"JBLineChartDotsView // delegate must implement - (UIColor *)lineChartDotsView:(JBLineChartDotsView *)lineChartDotsView colorForDotAtHorizontalIndex:(NSUInteger)horizontalIndex atLineIndex:(NSUInteger)lineIndex");
-                        dotView.backgroundColor = [self.delegate lineChartDotsView:self colorForDotAtHorizontalIndex:horizontalIndex atLineIndex:lineIndex];
-                        dotView.alpha = (weakSelf.selectedLineIndex == kJBLineChartDotsViewUnselectedLineIndex) ? 1.0f : 0.0f; // hide dots on off-selection
+                        dotView.alpha = (weakSelf.selectedLineIndex == lineIndex) ? 0.0f : 1.0f; // hide custom dots on selection
                     }
                 }
                 horizontalIndex++;
@@ -1469,7 +1567,7 @@ static UIColor *kJBLineChartViewDefaultDotSelectionColor = nil;
     if (self)
     {
         self.clipsToBounds = YES;
-        self.layer.cornerRadius = (radius * 0.5);
+        self.layer.cornerRadius = (radius * 0.5f);
     }
     return self;
 }
