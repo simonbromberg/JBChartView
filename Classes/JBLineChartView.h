@@ -273,7 +273,7 @@ typedef NS_ENUM(NSInteger, JBLineChartViewLineStyle){
 @end
 
 @interface JBLineChartView : JBChartView
-
+- (CGFloat)normalizedHeightForRawHeight:(CGFloat)rawHeight;
 @property (nonatomic, weak) IBOutlet id<JBLineChartViewDataSource> dataSource;
 @property (nonatomic, weak) IBOutlet id<JBLineChartViewDelegate> delegate;
 @property (nonatomic, assign) UIView* firstDotView;
