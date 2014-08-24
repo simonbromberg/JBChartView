@@ -167,7 +167,7 @@ static UIColor *kJBLineChartViewDefaultDotSelectionColor = nil;
 
 // View quick accessors
 
-- (CGFloat)availableHeight;
+
 - (CGFloat)padding;
 - (NSUInteger)dataCount;
 
