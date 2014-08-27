@@ -242,6 +242,9 @@ static UIColor *kJBLineChartViewDefaultDotSelectionColor = nil;
     return [self.dotsView.dotViewsDict allValues][0][0];
 }
 
+-(CGFloat) chartPadding {
+    return [self padding];
+}
 #pragma mark - Data
 
 - (void)reloadData
