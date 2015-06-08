@@ -111,7 +111,7 @@
  *
  *  @return Horizontal width (in pixels) between each bar.
  */
-- (NSUInteger)barPaddingForBarChartView:(JBBarChartView *)barChartView;
+- (CGFloat)barPaddingForBarChartView:(JBBarChartView *)barChartView;
 
 @end
 
@@ -126,5 +126,25 @@
  *  Default: YES.
  */
 @property (nonatomic, assign) BOOL showsVerticalSelection;
+
+/*
+ *  Bars can be (vertically) positoned top to bottom instead of bottom up.
+ *  If this property is set to YES, both the bar and the selection view will be inverted.
+ *  For the inverted orientation to take effect, reloadData must be called.
+ *
+ *  Default: NO.
+ */
+@property (nonatomic, assign, getter=isInverted) BOOL inverted;
+
+/**
+ *  The bar view at a particular index.
+ *
+ *  Default: nil.
+ *
+ *  @param index            The 0-based index of a given bar (left to right, x-axis).
+ *
+ *  @return The UIView representing the bar view at a given index or nil if the index is out of range.
+ */
+- (UIView *)barViewAtIndex:(NSUInteger)index;
 
 @end

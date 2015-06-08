@@ -38,12 +38,8 @@ Build and run the <i>JBChartViewDemo</i> project in Xcode. The demo demonstrates
 
 Simply add the following line to your <code>Podfile</code>:
 
-	pod 'JBChartView'
-	
-Your Podfile should look something like:
-
 	platform :ios, '6.0'
-	pod 'JBChartView', '~> 2.8.1'
+	pod 'JBChartView'
 	
 ### The Old School Way
 
@@ -62,9 +58,9 @@ All JBChartView implementations have a similiar data source and delgate pattern 
 To use JBCartView in a Swift project add the following to your bridging header (JBChartView-Bridging-Header.h):
 
 	#import <UIKit/UIKit.h>
-	#import "JBChartView/JBChartView.h"
-	#import "JBChartView/JBBarChartView.h"
-	#import "JBChartView/JBLineChartView.h"
+	#import "JBChartView.h"
+	#import "JBBarChartView.h"
+	#import "JBLineChartView.h"
 
 For more information about adding bridging headers see <a href="https://developer.apple.com/library/prerelease/ios/documentation/Swift/Conceptual/BuildingCocoaApps/MixandMatch.html" target="_blank">Swift and Objective-C in the Same Project</a>.
 
@@ -76,6 +72,15 @@ To initialize a <i>JBBarChartView</i>, you only need a few lines of code (see be
     barChartView.dataSource = self;
     barChartView.delegate = self;
     [self addSubview:barChartView];
+
+Just like you would for a `UITableView`, ensure you clear these properties in your `dealloc`:
+
+	- (void)dealloc
+	{
+		JBBarChartView *barChartView = ...; // i.e. _barChartView
+		barChartView.delegate = nil;
+		barChartView.dataSource = nil;
+	}
     
 At a minimum, you need to inform the data source how many bars are in the chart:
 
@@ -86,7 +91,7 @@ At a minimum, you need to inform the data source how many bars are in the chart:
 
 Secondly, you need to inform the delegate the height of each bar (automatically normalized across the entire chart):
     
-    - (CGFloat)barChartView:(JBBarChartView *)barChartView heightForBarViewAtAtIndex:(NSUInteger)index
+    - (CGFloat)barChartView:(JBBarChartView *)barChartView heightForBarViewAtIndex:(NSUInteger)index
     {
 		return ...; // height of bar at index
 	}
@@ -95,15 +100,26 @@ Lastly, ensure you have set the *frame* of your barChartView & call *reloadData*
 
 	barChartView.frame = CGRectMake( ... );
 	[barChartView reloadData];
+	
+**Note**: subsequent changes to the chart's frame will not invoke *reloadData*; it must be called directly afterwards for any changes to take effect. 
     
 #### JBLineChartView
 
 Similiarily, to initialize a JBLineChartView, you only need a few lines of code (see below). Line charts can also be initialized via a <b>nib</b> or with a <b>frame</b>.
 
 	JBLineChartView *lineChartView = [[JBLineChartView alloc] init];
-    lineChartView.dataSource = self;
-    lineChartView.delegate = self;
-    [self addSubview:lineChartView];
+	lineChartView.dataSource = self;
+	lineChartView.delegate = self;
+	[self addSubview:lineChartView];
+
+Just like you would for a `UITableView`, ensure you clear these properties in your `dealloc`:
+
+	- (void)dealloc
+	{
+		JBLineChartView *lineChartView = ...; // i.e. _lineChartView
+		lineChartView.delegate = nil;
+		lineChartView.dataSource = nil;
+	}
 
 At a minimum, you need to inform the data source how many lines and vertical data points (for each line) are in the chart:
 
@@ -124,11 +140,16 @@ Secondly, you need to inform the delegate of the y-position of each point (autom
 		return ...; // y-position (y-axis) of point at horizontalIndex (x-axis)
 	}
 
+**Note**: You can return NAN instead of CGFloat to indicate missing values. The chart's line will begin at the first non-NAN value and end at the last non-NAN value. The line will interopolate any NAN values in between (ie. the line will not be interrupted).
+
+	return [[NSNumber numberWithFloat:NAN] floatValue];
+
 Lastly, ensure you have set the *frame* of your lineChartView & call *reloadData* at least once:
 
 	lineChartView.frame = CGRectMake( ... );
 	[lineChartView reloadData];
 
+**Note**: subsequent changes to the chart's frame will not invoke *reloadData*; it must be called directly afterwards for any changes to take effect. 
 	
 ## Customization
 
@@ -149,6 +170,10 @@ Lastly, any JBChartView subclass can be collapsed or expanded programmatically v
 	- (void)setState:(JBChartViewState)state animated:(BOOL)animated callback:(void (^)())callback;
 
 #### JBBarChartView
+
+A bar chart can be inverted such that it's orientation is top->down (including the selection view) by setting the following property:
+
+	@property (nonatomic, assign, getter=isInverted) BOOL inverted;
 
 By default, a chart's bars will be black and flat. They can be customized by supplying a UIView subclass through the <i>optional</i> protocol:
 
@@ -232,7 +257,7 @@ By default, each line will not show dots for each point. To enable this on a per
 
 	- (BOOL)lineChartView:(JBLineChartView *)lineChartView showsDotsForLineAtLineIndex:(NSUInteger)lineIndex;
 
-To customize the size of each dot (default 3x the line width), implement:
+To the radius of each dot (default is 6x the line width, or 3x the diameter), implement:
 
 	- (CGFloat)lineChartView:(JBLineChartView *)lineChartView dotRadiusForDotAtHorizontalIndex:(NSUInteger)horizontalIndex atLineIndex:(NSUInteger)lineIndex;
 	
@@ -242,9 +267,13 @@ To customize the color of each dot during selection and non-selection events (de
 
 	- (UIColor *)lineChartView:(JBLineChartView *)lineChartView selectionColorForDotAtHorizontalIndex:(NSUInteger)horizontalIndex atLineIndex:(NSUInteger)lineIndex;
 	
-Alternatively, you can supply your own UIView instead of using the default impelmentation (note: custom dot views are automatically hidden when selected):
+Alternatively, you can supply your own UIView instead of using the default impelmentation:
 
 	- (UIView *)lineChartView:(JBLineChartView *)lineChartView dotViewAtHorizontalIndex:(NSUInteger)horizontalIndex atLineIndex:(NSUInteger)lineIndex;
+	
+Custom dot views are automatically shown when selected unless the following is implemented:
+
+    - (BOOL)lineChartView:(JBLineChartView *)lineChartView shouldHideDotViewOnSelectionAtHorizontalIndex:(NSUInteger)horizontalIndex atLineIndex:(NSUInteger)lineIndex;
 		
 As well, by default, each line will have squared off end caps and connection points. To enable rounded connections and end caps:
 
